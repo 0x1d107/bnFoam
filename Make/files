@@ -1,0 +1,3 @@
+rhoCentralFoam.C
+
+EXE = $(FOA_iUSER_APPBIN)/rhoBnFoam
