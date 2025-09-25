@@ -232,16 +232,6 @@ int main(int argc, char *argv[])
         U.correctBoundaryConditions();
         rhoU.boundaryFieldRef() == rho.boundaryField()*U.boundaryField();
 
-        if (!inviscid)
-        {
-            solve
-            (
-                fvm::ddt(rho, U) - fvc::ddt(rho, U)
-              - fvm::laplacian(muEff, U)
-              - fvc::div(tauMC)
-            );
-            rhoU = rho*U;
-        }
 
         // --- Solve energy
         surfaceScalarField sigmaDotU
@@ -270,16 +260,6 @@ int main(int argc, char *argv[])
                 e.boundaryField() + 0.5*magSqr(U.boundaryField())
             );
 
-        if (!inviscid)
-        {
-            solve
-            (
-                fvm::ddt(rho, e) - fvc::ddt(rho, e)
-              - fvm::laplacian(turbulence->alphaEff(), e)
-            );
-            thermo.correct();
-            rhoE = rho*(e + 0.5*magSqr(U));
-        }
 
         p.ref() =
             rho()
