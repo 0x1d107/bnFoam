@@ -123,14 +123,6 @@ int main(int argc, char *argv[])
         surfaceScalarField phiv_neg("phiv_neg", U_neg & mesh.Sf());
         phiv_neg.setOriented(false);
 
-        // Make fluxes relative to mesh-motion
-        if (mesh.moving())
-        {
-            surfaceScalarField meshPhi(mesh.phi());
-            meshPhi.setOriented(false);
-            phiv_pos -= meshPhi;
-            phiv_neg -= meshPhi;
-        }
 
         volScalarField c("c", sqrt(thermo.Cp()/thermo.Cv()*rPsi));
         surfaceScalarField cSf_pos
