@@ -45,7 +45,6 @@ Description
 #include "directionInterpolate.H"
 #include "localEulerDdtScheme.H"
 #include "fvcSmooth.H"
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
@@ -64,15 +63,20 @@ int main(int argc, char *argv[])
     #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
-    #include "createFields.H"
+    
+	#include "createFields.H"
+	#include "createPhaseFields.H"
+
+
     #include "createFieldRefs.H"
     #include "createTimeControls.H"
 
-    turbulence->validate();
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     #include "readFluxScheme.H"
+
+	
 
     const dimensionedScalar v_zero(dimVolume/dimTime, Zero);
 
@@ -98,6 +102,8 @@ int main(int argc, char *argv[])
 
         // --- Directed interpolation of primitive fields onto faces
 
+		//TODO extract to another header
+		//TODO add dependence on the phase
         surfaceScalarField rho_pos(interpolate(rho, pos));
         surfaceScalarField rho_neg(interpolate(rho, neg));
 
@@ -123,14 +129,6 @@ int main(int argc, char *argv[])
         surfaceScalarField phiv_neg("phiv_neg", U_neg & mesh.Sf());
         phiv_neg.setOriented(false);
 
-        // Make fluxes relative to mesh-motion
-        if (mesh.moving())
-        {
-            surfaceScalarField meshPhi(mesh.phi());
-            meshPhi.setOriented(false);
-            phiv_pos -= meshPhi;
-            phiv_neg -= meshPhi;
-        }
 
         volScalarField c("c", sqrt(thermo.Cp()/thermo.Cv()*rPsi));
         surfaceScalarField cSf_pos
@@ -209,16 +207,7 @@ int main(int argc, char *argv[])
           + aSf*p_pos - aSf*p_neg
         );
 
-        // Make flux for pressure-work absolute
-        if (mesh.moving())
-        {
-            surfaceScalarField meshPhi(mesh.phi());
-            meshPhi.setOriented(false);
-            phiEp += meshPhi*(a_pos*p_pos + a_neg*p_neg);
-        }
 
-        volScalarField muEff("muEff", turbulence->muEff());
-        volTensorField tauMC("tauMC", muEff*dev2(Foam::T(fvc::grad(U))));
 
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi));
@@ -234,21 +223,11 @@ int main(int argc, char *argv[])
 
 
         // --- Solve energy
-        surfaceScalarField sigmaDotU
-        (
-            "sigmaDotU",
-            (
-                fvc::interpolate(muEff)*mesh.magSf()*fvc::snGrad(U)
-              + fvc::dotInterpolate(mesh.Sf(), tauMC)
-            )
-          & (a_pos*U_pos + a_neg*U_neg)
-        );
 
         solve
         (
             fvm::ddt(rhoE)
           + fvc::div(phiEp)
-          - fvc::div(sigmaDotU)
         );
 
         e = rhoE/rho - 0.5*magSqr(U);
@@ -267,7 +246,6 @@ int main(int argc, char *argv[])
         p.correctBoundaryConditions();
         rho.boundaryFieldRef() == psi.boundaryField()*p.boundaryField();
 
-        turbulence->correct();
 
         runTime.write();
 
